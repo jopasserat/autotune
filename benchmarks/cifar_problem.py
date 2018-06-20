@@ -3,10 +3,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from torch_net_problem import TorchNetProblem
-from ..core.params import *
-from data.cifar_data_loader import get_train_val_set, get_test_set
-from ml_models.cudaconvnet2 import CudaConvNet2
+from benchmarks.torch_net_problem import TorchNetProblem
+from core.params import *
+from benchmarks.data.cifar_data_loader import get_train_val_set, get_test_set
+from benchmarks.ml_models.cudaconvnet2 import CudaConvNet2
 
 
 class CifarProblem(TorchNetProblem):

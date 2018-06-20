@@ -3,9 +3,9 @@ import os
 import abc
 import torch
 from torch.autograd import Variable
-from ..core.problem_def import Problem
 
-from ..util.progress_bar import progress_bar
+from core.problem_def import Problem
+from util.progress_bar import progress_bar
 
 
 class TorchNetProblem(Problem):
