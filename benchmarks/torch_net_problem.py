@@ -13,6 +13,8 @@ class TorchNetProblem(Problem):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, data_dir, output_dir):
+        super(TorchNetProblem, self).__init__()
+
         self.data_dir = data_dir
         self.output_dir = output_dir
         if not os.path.exists(output_dir):
