@@ -87,7 +87,7 @@ class CategoricalParam(object):
 
     def get_param_range(self, num_vals, stochastic=False):
         if stochastic:
-            return [self.val_list[i] for i in numpy.unique(numpy.random.randint(len(self.val_list),size=num_vals))]
+            return random_combinations(self.val_list, num_vals)
         if num_vals >= self.num_vals:
             return self.val_list
         else:
@@ -96,6 +96,60 @@ class CategoricalParam(object):
             tmp.remove(self.default)
             random.shuffle(tmp)
             return [self.default] + tmp[0:num_vals-1]
+
+
+def random_indices(high, size):
+    return numpy.random.randint(high, size=size)
+
+
+def random_combinations(val_list, num_vals, unique = True):
+    rand_indices = random_indices(len(val_list), num_vals)
+    if(unique):
+        indices = numpy.unique(rand_indices)
+    else:
+        indices = rand_indices
+    return [val_list[i] for i in indices]
+
+
+class DenseCategoricalParam(object):
+    def __init__(self, name, val_list, default):
+        self.name = name
+        self.val_list = val_list
+        self.default = default
+        self.init_val = default
+        self.num_vals = len(self.val_list)
+        self.param_type = 'densecategorical'
+
+    def get_param_range(self, num_vals, stochastic=False):
+        if stochastic:
+            return random_combinations(self.val_list, num_vals, unique=False)
+        else:
+            # return random subset, but include default value
+            tmp = self.val_list.copy()
+            tmp.remove(self.default)
+            values = random_combinations(tmp, num_vals - 1, unique=False)
+            return [self.default] + values
+
+
+class PairParam(object):
+    def __init__(self, name, get_param1_val, param1_key, current_arm, param2, default):
+        self.name = name
+        self.current_arm = current_arm
+        self.param1_key = param1_key
+        self.get_param1_val = get_param1_val
+        self.param2 = param2
+        self.default = default
+        self.init_val = default
+        self.param_type = 'pair'
+
+    def get_param_range(self, unused_num_vals, stochastic=False):
+
+        # get from input param key, get a corresponding set of random values
+        val_p1 = self.get_param1_val(self.current_arm, self.param1_key)
+        vals_p2 = self.param2.get_param_range(val_p1, stochastic)
+
+        # FIXME yet another trick so that generate_random_arm in problem_def.py takes the whole list if any
+        return (vals_p2, val_p1)
 
 
 class ConditionalParam(object):
