@@ -114,7 +114,7 @@ class TorchNetProblem(Problem):
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
             arms[i]['n_resources'] = 0
-            arms[i]['dir'] = self.output_dir + dirname
+            arms[i]['dir'] = "{}/{}".format(self.output_dir, dirname)
             self.construct_model(arms[i])
         return arms
 
