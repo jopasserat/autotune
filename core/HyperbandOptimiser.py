@@ -29,7 +29,7 @@ class HyperbandOptimiser(RandomOptimiser):
             s_min = 2  # skip the rest of the brackets after s_min
         else:
             s_min = 0
-        B = (s_max+1)*max_iter  # total number of iterations (without reuse) per execution of Succesive Halving (n,r)
+        B = (s_max+1)*max_iter  # total number of iterations (without reuse) per execution of Successive Halving (n,r)
 
         #### Begin Finite Horizon Hyperband outlerloop. Repeat indefinetely.
         for s in reversed(range(s_min, s_max+1)):
