@@ -1,11 +1,20 @@
 # Code excerpt taken from Hyperband experiments, L. Li 2016
+# parameter represention module
+
+
+
 import numpy
 import random
 import copy
 
 
 class Param(object):
-    def __init__(self, name, min_val, max_val, init_val=None, distrib='uniform', scale='log', logbase=numpy.e, interval=None):
+'''
+define different properties and helper functions
+'''
+
+    def __init__(self, name, min_val, max_val, init_val=None,
+                 distrib='uniform', scale='log', logbase=numpy.e, interval=None):
         self.name = name
         self.init_val = init_val
         self.min_val = min_val
@@ -17,7 +26,8 @@ class Param(object):
         self.interval = interval
 
     def __repr__(self):
-        return "%s (%f,%f,%s)" % (self.name, self.min_val, self.max_val, self.scale)
+        return "%s (%f,%f,%s)" % (self.name, self.min_val, self.max_val,
+                                  self.scale)
 
     def get_param_range(self, num_vals, stochastic=False):
         if stochastic:
@@ -63,6 +73,9 @@ class Param(object):
 
 
 class IntParam(Param):
+    '''
+    discrete (integer) parameters
+    '''
     def __init__(self, name, min_val, max_val, init_val=None):
         super(IntParam, self).__init__(name, min_val, max_val, init_val=init_val)
         self.param_type = "integer"
@@ -77,6 +90,9 @@ class IntParam(Param):
 
 
 class CategoricalParam(object):
+    '''
+    categorical parameters
+    '''
     def __init__(self, name, val_list, default):
         self.name = name
         self.val_list = val_list
@@ -112,6 +128,9 @@ def random_combinations(val_list, num_vals, unique = True):
 
 
 class DenseCategoricalParam(object):
+    '''
+    Similar to CatogricalParam, but draws with replacement
+    '''
     def __init__(self, name, val_list, default):
         self.name = name
         self.val_list = val_list
@@ -132,7 +151,11 @@ class DenseCategoricalParam(object):
 
 
 class PairParam(object):
-    def __init__(self, name, get_param1_val, param1_key, current_arm, param2, default):
+    '''
+    parameters combosed of two sub-parameters (keys, values)
+    '''
+    def __init__(self, name, get_param1_val, param1_key, current_arm, param2,
+                 default):
         self.name = name
         self.current_arm = current_arm
         self.param1_key = param1_key
@@ -148,11 +171,15 @@ class PairParam(object):
         val_p1 = self.get_param1_val(self.current_arm, self.param1_key)
         vals_p2 = self.param2.get_param_range(val_p1, stochastic)
 
-        # FIXME yet another trick so that generate_random_arm in problem_def.py takes the whole list if any
+        # FIXME yet another trick so that generate_random_arm in problem_def.py
+        # takes the whole list if any
         return (vals_p2, val_p1)
 
 
 class ConditionalParam(object):
+    '''
+    draws a parameter with a constrained condition
+    '''
     def __init__(self, cond_param, cond_val, param):
         self.name = param.name
         self.cond_param = cond_param
@@ -171,6 +198,9 @@ class ConditionalParam(object):
 # Adaptive heuristic zooms into a local portion of the search space.
 # Not recommended for actual use as there are no theoretical guarantees.
 def zoom_space(params, center, pct=0.40):
+    '''
+    todo
+    '''
     new_params = copy.deepcopy(params)
     for p in params.keys():
         range = params[p].max_val - params[p].min_val
@@ -183,4 +213,3 @@ def zoom_space(params, center, pct=0.40):
         new_params[p].max_val = new_max
 
     return new_params
-

@@ -17,7 +17,8 @@ class DLTKProblem(CifarProblem):
 
         # Set this to choose a subset of tunable hyperparams
         # self.hps = None
-        self.hps = ['num_residual_units', 'learning_rate', 'nb_scales', 'filters', 'strides']
+        self.hps = ['num_residual_units', 'learning_rate', 'nb_scales',
+                    'filters', 'strides']
 
     # def initialise_data(self):
     #     # 40k train, 10k val, 10k test
@@ -34,16 +35,26 @@ class DLTKProblem(CifarProblem):
     #     self.train_sampler = train_sampler
 
     def initialise_domain(self):
-        strides_values = DenseCategoricalParam("strides_values", [[1, 1, 1], [2, 2, 2]], [1, 1, 1])
-        filters_values = DenseCategoricalParam("filters_values", [16, 64, 128, 256, 512], 16)
+        '''
+        parse parameters with value and type
+        '''
+        strides_values = DenseCategoricalParam("strides_values",
+                                               [[1, 1, 1], [2, 2, 2]], [1, 1, 1])
+        filters_values = DenseCategoricalParam("filters_values",
+                                               [16, 64, 128, 256, 512], 16)
 
+        # makes sure to draw in order from parameters sequentially in the same
+        # order as the insertion order
         params = OrderedDict([
             ("num_residual_units", IntParam("num_residual_units", 1, 8, 3)),
-            ("learning_rate", Param("learning_rate", -6, 0, distrib='uniform', scale='log', logbase=10)),
+            ("learning_rate", Param("learning_rate", -6, 0, distrib='uniform',
+                                    scale='log', logbase=10)),
             ("nb_scales", IntParam("nb_scales", 1, 8, 4)),
             # FIXME what is a proper default value??
-            ("filters", PairParam("filters", get_param_vals, "nb_scales", self.current_arm, filters_values, 42)),
-            ("strides", PairParam("strides", get_param_vals, "nb_scales", self.current_arm, strides_values, 42))
+            ("filters", PairParam("filters", get_param_vals, "nb_scales",
+                                  self.current_arm, filters_values, 42)),
+            ("strides", PairParam("strides", get_param_vals, "nb_scales",
+                                  self.current_arm, strides_values, 42))
         ])
 
         return params
