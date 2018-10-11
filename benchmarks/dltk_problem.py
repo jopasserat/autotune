@@ -64,6 +64,14 @@ class DLTKProblem(CifarProblem):
 
         return params
 
+    # FIXME can we reuse same prototype?
+    def save_checkpoint(self, path, epoch, model, reader, reader_example_shapes):
+
+        export_dir = model.export_saved_model(
+            export_dir_base=path,
+            serving_input_receiver_fn=reader.serving_input_receiver_fn(reader_example_shapes))
+        print('Model saved to {}.'.format(export_dir))
+
     def construct_model(self, arm):
         print("<<construct_model not implemented yet>>")
 
