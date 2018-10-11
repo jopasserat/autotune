@@ -12,9 +12,14 @@ def get_param_vals(arm, param_key):
 
 class DLTKProblem(CifarProblem):
 
-    def __init__(self, data_dir, output_dir):
-        super(DLTKProblem, self).__init__(data_dir, output_dir)
+    def __init__(self, data_dir, output_dir, train_csv = "train.csv", validation_csv = "val.csv"):
 
+        self.data_dir = data_dir
+        self.output_dir = output_dir
+        self.train_csv = train_csv
+        self.validation_csv = validation_csv
+
+        super(DLTKProblem, self).__init__(data_dir, output_dir)
         # Set this to choose a subset of tunable hyperparams
         # self.hps = None
         self.hps = ['num_residual_units', 'learning_rate', 'nb_scales',
