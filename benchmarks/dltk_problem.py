@@ -194,3 +194,161 @@ class DLTKProblem(CifarProblem):
 
     def eval_arm(self, arm, n_resources):
         print("<<eval_arm not implemented yet>>")
+        # TODO load model from previous checkpoint and resume training
+        # DLTK automatically resumes when finding a model in the specified path
+
+
+class SynapseMultiAtlas(object):
+
+    def __init__(self):
+        self.NUM_CLASSES = 14
+
+
+    # MODEL
+    def model_fn(self, features, labels, mode, params):
+        """Build architecture of network as an instance of tf.estimator.EstimatorSpec according
+         to HPs from top-level optimiser.
+
+        Args:
+            features (TYPE): Description
+            labels (TYPE): Description
+            mode (TYPE): Description
+            params (TYPE): Description
+
+        Returns:
+            TYPE: tf.estimator.EstimatorSpec
+        """
+        # 1. create a model and its outputs
+
+        from dltk.core.metrics import dice
+        from dltk.core.losses import sparse_balanced_crossentropy
+        from dltk.networks.segmentation.unet import residual_unet_3d
+        from dltk.networks.segmentation.unet import asymmetric_residual_unet_3d
+        from dltk.networks.segmentation.fcn import residual_fcn_3d
+        from dltk.core.activations import leaky_relu
+
+        filters = params["filters"]
+        strides = params["strides"]
+        num_residual_units = params["num_residual_units"]
+        loss_type = params["loss"]
+        net = params["net"]
+
+        def lrelu(x):
+            return leaky_relu(x, 0.1)
+
+        if net == 'fcn':
+            net_output_ops = residual_fcn_3d(
+                features['x'], self.NUM_CLASSES,
+                num_res_units=num_residual_units,
+                filters=filters,
+                strides=strides,
+                activation=lrelu,
+                mode=mode)
+        elif net == 'unet':
+            net_output_ops = residual_unet_3d(
+                features['x'], self.NUM_CLASSES,
+                num_res_units=num_residual_units,
+                filters=filters,
+                strides=strides,
+                activation=lrelu,
+                mode=mode)
+        elif net == 'asym_unet':
+            net_output_ops = asymmetric_residual_unet_3d(
+                features['x'],
+                self.NUM_CLASSES,
+                num_res_units=num_residual_units,
+                filters=filters,
+                strides=strides,
+                activation=lrelu,
+                mode=mode)
+
+        # 1.1 Generate predictions only (for `ModeKeys.PREDICT`)
+        if mode == tf.estimator.ModeKeys.PREDICT:
+            return tf.estimator.EstimatorSpec(
+                mode=mode, predictions=net_output_ops,
+                export_outputs={'out': tf.estimator.export.PredictOutput(
+                    net_output_ops)})
+
+        # 2. set up a loss function
+        if loss_type == 'ce':
+            ce = tf.nn.sparse_softmax_cross_entropy_with_logits(
+                logits=net_output_ops['logits'], labels=labels['y'])
+            loss = tf.reduce_mean(ce)
+        elif loss_type == 'balce':
+            loss = sparse_balanced_crossentropy(
+                net_output_ops['logits'], labels['y'])
+
+        # 3. define a training op and ops for updating
+        # moving averages (i.e. for batch normalisation)
+        global_step = tf.train.get_global_step()
+        if params["opt"] == 'adam':
+            optimiser = tf.train.AdamOptimizer(
+                learning_rate=params["learning_rate"], epsilon=1e-5)
+        elif params["opt"] == 'momentum':
+            optimiser = tf.train.MomentumOptimizer(
+                learning_rate=params["learning_rate"], momentum=0.9)
+        elif params["opt"] == 'rmsprop':
+            optimiser = tf.train.RMSPropOptimizer(
+                learning_rate=params["learning_rate"], momentum=0.9)
+
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        with tf.control_dependencies(update_ops):
+            train_op = optimiser.minimize(loss, global_step=global_step)
+
+        # 4.1 (optional) create custom image summaries for tensorboard
+        my_image_summaries = {}
+        my_image_summaries['feat_t1'] = tf.expand_dims(
+            features['x'][:, 0, :, :, 0], 3)
+        my_image_summaries['labels'] = tf.expand_dims(
+            tf.cast(labels['y'], tf.float32)[:, 0, :, :], 3)
+        my_image_summaries['predictions'] = tf.expand_dims(
+            tf.cast(net_output_ops['y_'], tf.float32)[:, 0, :, :], 3)
+
+        [tf.summary.image(name, image)
+         for name, image in my_image_summaries.items()]
+
+        # 4.2 (optional) create custom metric summaries for tensorboard
+        dice_tensor = tf.py_func(
+            dice, [net_output_ops['y_'], labels['y'],
+                   tf.constant(self.NUM_CLASSES)], tf.float32)
+
+        [tf.summary.scalar('dsc_l{}'.format(i), dice_tensor[i])
+         for i in range(self.NUM_CLASSES)]
+
+        # 5. Return EstimatorSpec object
+        return tf.estimator.EstimatorSpec(
+            mode=mode, predictions=net_output_ops,
+            loss=loss, train_op=train_op,
+            eval_metric_ops=None)
+
+    def mock_train(self, utils, net):
+        """
+        Trigger minimal training in order to be able to export model.
+
+        :param utils: Instance of DLTKBoilerplate
+        :param net: Network to train, instance of tf.estimator.Estimator
+        :return:
+        """
+        import os
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+        tf.logging.set_verbosity(tf.logging.INFO)
+
+        (reader, reader_example_shapes, reader_params) = setup_reader()
+
+        # Get input functions and queue initialisation hooks
+        # for training and validation data
+        train_input_fn, train_qinit_hook = reader.get_inputs(
+            utils.train_filenames,
+            tf.estimator.ModeKeys.TRAIN,
+            example_shapes=reader_example_shapes,
+            batch_size=1,
+            shuffle_cache_size=1,
+            params=reader_params)
+
+
+        try:
+            net.train(
+                input_fn=utils.train_input_fn,
+                steps=1)
+        except:
+            return
