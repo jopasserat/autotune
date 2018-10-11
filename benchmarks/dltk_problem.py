@@ -73,7 +73,49 @@ class DLTKProblem(CifarProblem):
         print('Model saved to {}.'.format(export_dir))
 
     def construct_model(self, arm):
-        print("<<construct_model not implemented yet>>")
+        """
+        Construct model and optimizer based on hyperparameters
+        :param arm:
+        :return:
+        """
+        arm["save_path"] = arm['dir'] + "/synapse_ct_seg"
+
+        # force FCN and cross entropy for the moment
+        static_params = {
+            "net": "fcn",
+            "loss": "ce",
+            "opt": "momentum"
+        }
+        arm_params = dict((k, convert_if_numpy(arm[k])) for k in self.hps)
+        # nb_scales is only needed to generate correct number of filters and strides, don't need to carry it any further
+        arm_params.pop("nb_scales")
+
+        config_dict = merge_two_dicts(static_params, arm_params)
+
+        # save DLTK config to JSON file
+        config_file = arm['dir'] + "/config.json"
+        with open(config_file, "w") as config_file:
+            json.dump(config_dict, config_file, indent=2)
+
+        # now create model DLTK style
+        config = tf.ConfigProto()
+        # config.gpu_options.allow_growth = True
+
+        synapse_model = SynapseMultiAtlas()
+
+        # Instantiate the neural network estimator
+        model = tf.estimator.Estimator(
+            model_fn=synapse_model.model_fn,
+            model_dir=arm["save_path"],
+            params=config_dict,
+            config=tf.estimator.RunConfig(session_config=config))
+
+        (reader, reader_example_shapes, _) = setup_reader()
+        # FIXME looks like i'll have to train at least 1 step :(
+        synapse_model.mock_train(self.utils, model)
+        self.save_checkpoint(arm["save_path"], 0, model, reader, reader_example_shapes)
+
+        return arm["save_path"]
 
     def eval_arm(self, arm, n_resources):
         print("<<eval_arm not implemented yet>>")
