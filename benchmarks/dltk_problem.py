@@ -10,6 +10,40 @@ from collections import OrderedDict
 def get_param_vals(arm, param_key):
     return arm[param_key]
 
+def setup_reader():
+    NUM_CHANNELS = 1
+
+    # Set up a data reader to handle the file i/o.
+    reader_params = {
+        'n_examples': 32,
+        'example_size': [64, 64, 64],
+        'extract_examples': True
+    }
+
+    reader_example_shapes = {
+        'features': {'x': reader_params['example_size'] + [NUM_CHANNELS, ]},
+        'labels': {'y': reader_params['example_size']}}
+
+    reader = Reader(read_fn, {'features': {'x': tf.float32},
+                              'labels': {'y': tf.int32}})
+
+    return (reader, reader_example_shapes, reader_params)
+
+
+class DLTKBoilerplate(object):
+    """
+    Just a value class (if that makes any sort of sense in Python) to aggregate all the utilities created for training.
+    """
+    def __init__(self, train_input_fn, train_qinit_hook, val_input_fn, val_qinit_hook, val_summary_hook, step_cnt_hook, train_filenames, val_filenames):
+        self.train_input_fn = train_input_fn
+        self.train_qinit_hook = train_qinit_hook
+        self.val_input_fn = val_input_fn
+        self.val_qinit_hook = val_qinit_hook
+        self.val_summary_hook = val_summary_hook
+        self.step_cnt_hook = step_cnt_hook
+        self.train_filenames = train_filenames
+        self.validation_filename = val_filenames
+
 class DLTKProblem(CifarProblem):
 
     def __init__(self, data_dir, output_dir, train_csv = "train.csv", validation_csv = "val.csv"):
@@ -25,19 +59,60 @@ class DLTKProblem(CifarProblem):
         self.hps = ['num_residual_units', 'learning_rate', 'nb_scales',
                     'filters', 'strides']
 
-    # def initialise_data(self):
-    #     # 40k train, 10k val, 10k test
-    #     print('==> Preparing data..')
-    #     train_data, val_data, train_sampler, val_sampler = get_train_val_set(data_dir=self.data_dir,
-    #  valid_size=0.2)
-    #     test_data = get_test_set(data_dir=self.data_dir)
-    #
-    #     self.val_loader = torch.utils.data.DataLoader(val_data, batch_size=100, sampler=val_sampler,
-    #   num_workers=2, pin_memory=False)
-    #     self.test_loader = torch.utils.data.DataLoader(test_data, batch_size=100, shuffle=True,
-    #    num_workers=2, pin_memory=False)
-    #     self.train_data = train_data
-    #     self.train_sampler = train_sampler
+    def initialise_data(self):
+        import pandas as pd
+        import numpy as np
+        import os
+
+        BATCH_SIZE = 4
+        SHUFFLE_CACHE_SIZE = 128
+
+        # FIXME: move some place else
+        np.random.seed(42)
+        tf.set_random_seed(42)
+
+        print('Setting up...')
+
+        train_filenames = pd.read_csv(
+            "{}/{}".format(self.data_dir, self.train_csv),
+            dtype=object,
+            keep_default_na=False,
+            na_values=[]).values
+
+        val_filenames = pd.read_csv(
+            "{}/{}".format(self.data_dir, self.validation_csv),
+            dtype=object,
+            keep_default_na=False,
+            na_values=[]).values
+
+        (reader, reader_example_shapes, reader_params) = setup_reader()
+
+        # Get input functions and queue initialisation hooks
+        # for training and validation data
+        train_input_fn, train_qinit_hook = reader.get_inputs(
+            train_filenames,
+            tf.estimator.ModeKeys.TRAIN,
+            example_shapes=reader_example_shapes,
+            batch_size=BATCH_SIZE,
+            shuffle_cache_size=SHUFFLE_CACHE_SIZE,
+            params=reader_params)
+
+        val_input_fn, val_qinit_hook = reader.get_inputs(
+            val_filenames,
+            tf.estimator.ModeKeys.EVAL,
+            example_shapes=reader_example_shapes,
+            batch_size=BATCH_SIZE,
+            shuffle_cache_size=min(SHUFFLE_CACHE_SIZE, EVAL_STEPS),
+            params=reader_params)
+
+        # Hooks for validation summaries
+        val_summary_hook = tf.contrib.training.SummaryAtEndHook(
+            os.path.join(self.output_dir, 'eval'))
+        step_cnt_hook = tf.train.StepCounterHook(
+            every_n_steps=EVAL_EVERY_N_STEPS, output_dir=self.output_dir)
+
+        self.utils = DLTKBoilerplate(
+            train_input_fn, train_qinit_hook, val_input_fn, val_qinit_hook, val_summary_hook, step_cnt_hook, train_filenames, val_filenames)
 
     def initialise_domain(self):
         '''
