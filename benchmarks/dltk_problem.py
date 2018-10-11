@@ -1,11 +1,23 @@
 from __future__ import division
-# import torch
-#
+import tensorflow as tf
+
+import json
+
 from benchmarks.cifar_problem import CifarProblem
-# from data.svhn_data_loader import get_train_val_set, get_test_set
+from dltk.io.abstract_reader import Reader
+from benchmarks.dltk.reader import read_fn
+
 from core.params import *
 from collections import OrderedDict
+from util.dict import merge_two_dicts
+from util.rich_numpy import convert_if_numpy
 
+# FIXME move somewhere else
+# PARAMS
+EVAL_EVERY_N_STEPS = 1000
+EVAL_STEPS = 1
+
+MAX_STEPS = 100000
 
 def get_param_vals(arm, param_key):
     return arm[param_key]
