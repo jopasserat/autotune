@@ -14,10 +14,14 @@ from util.rich_numpy import convert_if_numpy
 
 # FIXME move somewhere else
 # PARAMS
-EVAL_EVERY_N_STEPS = 1000
+# EVAL_EVERY_N_STEPS = 1000
+EVAL_EVERY_N_STEPS = 100
 EVAL_STEPS = 1
+# RESOURCES_MULTIPLIER = 10000
+RESOURCES_MULTIPLIER = 1
+MAX_STEPS = 100000 # TODO remove: unused
+BATCH_SIZE = 4
 
-MAX_STEPS = 100000
 
 def get_param_vals(arm, param_key):
     return arm[param_key]
@@ -76,7 +80,6 @@ class DLTKProblem(CifarProblem):
         import numpy as np
         import os
 
-        BATCH_SIZE = 4
         SHUFFLE_CACHE_SIZE = 128
 
         # FIXME: move some place else
@@ -184,30 +187,38 @@ class DLTKProblem(CifarProblem):
         with open(config_file, "w") as config_file:
             json.dump(config_dict, config_file, indent=2)
 
-        # now create model DLTK style
-        config = tf.ConfigProto()
-        # config.gpu_options.allow_growth = True
-
-        synapse_model = SynapseMultiAtlas()
-
-        # Instantiate the neural network estimator
-        model = tf.estimator.Estimator(
-            model_fn=synapse_model.model_fn,
-            model_dir=arm["save_path"],
-            params=config_dict,
-            config=tf.estimator.RunConfig(session_config=config))
-
-        (reader, reader_example_shapes, _) = setup_reader()
-        # FIXME looks like i'll have to train at least 1 step :(
-        synapse_model.mock_train(self.utils, model)
-        self.save_checkpoint(arm["save_path"], 0, model, reader, reader_example_shapes)
-
         return arm["save_path"]
 
     def eval_arm(self, arm, n_resources):
-        print("<<eval_arm not implemented yet>>")
-        # TODO load model from previous checkpoint and resume training
-        # DLTK automatically resumes when finding a model in the specified path
+        """
+        Load model from previous checkpoint and resume training
+        :param arm:
+        :param n_resources:
+        :return:
+        """
+        # load model params config from JSON file
+        config_file = arm['dir'] + "/config.json"
+        with open(config_file, "r") as config_file:
+            config_dict = json.load(config_file)
+
+        # Instantiate the neural network estimator
+        (model, synapse_model) = self.build_model_from_config(arm["save_path"], config_dict)
+
+        # Compute derived hyperparameters
+        # TODO adjust resources multiplier
+        # each unit of resource = RESOURCES_MULTIPLIER examples
+        n_steps = int(n_resources * RESOURCES_MULTIPLIER * EVAL_EVERY_N_STEPS)
+
+        # Train the net for one epoch
+        print('Starting training...')
+        try:
+            results_val = synapse_model.train_and_evaluate(self.utils, model, n_steps)
+
+            print('Step = {}; val loss = {:.5f};'.format(
+                results_val['global_step'], results_val['loss']))
+
+        except KeyboardInterrupt:
+            pass
 
 
 class SynapseMultiAtlas(object):
