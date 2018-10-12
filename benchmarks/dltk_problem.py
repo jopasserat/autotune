@@ -162,6 +162,24 @@ class DLTKProblem(CifarProblem):
             serving_input_receiver_fn=reader.serving_input_receiver_fn(reader_example_shapes))
         print('Model saved to {}.'.format(export_dir))
 
+    def build_model_from_config(self, save_path, config_dictionary):
+
+        # now create model DLTK style
+        config = tf.ConfigProto()
+        # config.gpu_options.allow_growth = True
+
+        synapse_model = SynapseMultiAtlas()
+
+        # Instantiate the neural network estimator
+        model = tf.estimator.Estimator(
+            model_fn=synapse_model.model_fn,
+            model_dir=save_path,
+            params=config_dictionary,
+            config=tf.estimator.RunConfig(session_config=config))
+
+        return (model, synapse_model)
+
+
     def construct_model(self, arm):
         """
         Construct model and optimizer based on hyperparameters
