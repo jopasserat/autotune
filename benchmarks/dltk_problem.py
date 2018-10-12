@@ -362,34 +362,25 @@ class SynapseMultiAtlas(object):
             loss=loss, train_op=train_op,
             eval_metric_ops=None)
 
-    def mock_train(self, utils, net):
-        """
-        Trigger minimal training in order to be able to export model.
 
+    def train_and_evaluate(self, utils, net, nb_training_steps):
+        """
+        Train `net` model for `nb_nb_training_steps` and return evaluation.
         :param utils: Instance of DLTKBoilerplate
         :param net: Network to train, instance of tf.estimator.Estimator
-        :return:
+        :param nb_training_steps: How many gradient updates to perform
+        :return: output of Estimator.evaluate
         """
-        import os
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
-        tf.logging.set_verbosity(tf.logging.INFO)
+        print("<<< parameters >>> {}".format(net.params))
 
-        (reader, reader_example_shapes, reader_params) = setup_reader()
-
-        # Get input functions and queue initialisation hooks
-        # for training and validation data
-        train_input_fn, train_qinit_hook = reader.get_inputs(
-            utils.train_filenames,
-            tf.estimator.ModeKeys.TRAIN,
-            example_shapes=reader_example_shapes,
-            batch_size=1,
-            shuffle_cache_size=1,
-            params=reader_params)
-
-
-        try:
-            net.train(
+        net.train(
                 input_fn=utils.train_input_fn,
-                steps=1)
-        except:
-            return
+                hooks=[utils.train_qinit_hook, utils.step_cnt_hook],
+                steps=nb_training_steps)
+
+        results_val = net.evaluate(
+            input_fn=utils.val_input_fn,
+            hooks=[utils.val_qinit_hook, utils.val_summary_hook],
+            steps=EVAL_STEPS)
+
+        return results_val
