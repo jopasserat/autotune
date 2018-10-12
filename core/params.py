@@ -9,9 +9,9 @@ import copy
 
 
 class Param(object):
-'''
-define different properties and helper functions
-'''
+    '''
+    define different properties and helper functions
+    '''
 
     def __init__(self, name, min_val, max_val, init_val=None,
                  distrib='uniform', scale='log', logbase=numpy.e, interval=None):
