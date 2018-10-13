@@ -6,8 +6,8 @@ from RandomOptimiser import RandomOptimiser
 
 
 class TpeOptimiser(RandomOptimiser):
-    def __init__(self, arms_init=[], val_loss_init=[], Y_init=[]):
-        super(TpeOptimiser, self).__init__(arms_init, val_loss_init, Y_init)
+    def __init__(self):
+        super(TpeOptimiser, self).__init__()
         self.name = "TPE"
 
     def run_optimization(self, problem, n_resources, max_iter=None, max_time=np.inf, verbosity=False):
