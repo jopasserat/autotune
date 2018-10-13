@@ -227,10 +227,11 @@ class FactoredParam(object):
     def get_param_range(self, num_vals, stochastic=False):
         first_val = self.first_value_generator(self.first_val_upper_bound)
         values = generate_factors(first_val, self.multipliers, [first_val], num_vals, self.upper_bound)
-        if stochastic:
-            return random_combinations(values, num_vals)
-        else:
-            return values
+        # if stochastic:
+        #     return random_combinations(values, num_vals, unique=False)
+        # else:
+        # FIXME do not consider stochastic boolean for now since it wrecks the layout created by the multipliers
+        return values
 
 
 def generate_factor(multipliers, previous_value):
