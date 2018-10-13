@@ -136,9 +136,11 @@ class DLTKProblem(CifarProblem):
         '''
         # TODO could consider heterogeneous strides
         strides_values = DenseCategoricalParam("strides_values",
-                                               [[1, 1, 1], [2, 2, 2]], [1, 1, 1])
-        filters_values = DenseCategoricalParam("filters_values",
-                                               [16, 64, 128, 256, 512], 16)
+                                               [[1, 1, 1], [2, 2, 2], [3, 3, 3], [4, 4, 4]], [1, 1, 1])
+
+        # TODO in the future add 0.5, 0.25 as multipliers
+        multipliers = [2, 4]
+        filters_values = FactoredParam("filters_values", random_power_of_2, 16, 256, multipliers)
 
         # makes sure to draw in order from parameters sequentially in the same
         # order as the insertion order
