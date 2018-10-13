@@ -129,10 +129,12 @@ class DLTKProblem(CifarProblem):
         self.utils = DLTKBoilerplate(
             train_input_fn, train_qinit_hook, val_input_fn, val_qinit_hook, val_summary_hook, step_cnt_hook, train_filenames, val_filenames)
 
+
     def initialise_domain(self):
         '''
         parse parameters with value and type
         '''
+        # TODO could consider heterogeneous strides
         strides_values = DenseCategoricalParam("strides_values",
                                                [[1, 1, 1], [2, 2, 2]], [1, 1, 1])
         filters_values = DenseCategoricalParam("filters_values",
@@ -141,10 +143,10 @@ class DLTKProblem(CifarProblem):
         # makes sure to draw in order from parameters sequentially in the same
         # order as the insertion order
         params = OrderedDict([
-            ("num_residual_units", IntParam("num_residual_units", 1, 8, 3)),
+            ("num_residual_units", IntParam("num_residual_units", 1, 3, 3)),
             ("learning_rate", Param("learning_rate", -6, 0, distrib='uniform',
                                     scale='log', logbase=10)),
-            ("nb_scales", IntParam("nb_scales", 1, 8, 4)),
+            ("nb_scales", IntParam("nb_scales", 1, 5, 4)),
             # FIXME what is a proper default value??
             ("filters", PairParam("filters", get_param_vals, "nb_scales",
                                   self.current_arm, filters_values, 42)),
