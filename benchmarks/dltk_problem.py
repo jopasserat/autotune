@@ -136,7 +136,7 @@ class DLTKProblem(CifarProblem):
         '''
         # TODO could consider heterogeneous strides
         strides_values = DenseCategoricalParam("strides_values",
-                                               [[1, 1, 1], [2, 2, 2], [3, 3, 3], [4, 4, 4]], [1, 1, 1])
+                                               [[1, 1, 1], [2, 2, 2], [3, 3, 3], [4, 4, 4]], [[1, 1, 1]])
 
         # TODO in the future add 0.5, 0.25 as multipliers
         multipliers = [2, 4]
@@ -146,7 +146,7 @@ class DLTKProblem(CifarProblem):
         # order as the insertion order
         params = OrderedDict([
             ("num_residual_units", IntParam("num_residual_units", 1, 3, 3)),
-            ("learning_rate", Param("learning_rate", -6, 0, distrib='uniform',
+            ("learning_rate", Param("learning_rate", -6, -1, distrib='uniform',
                                     scale='log', logbase=10)),
             ("nb_scales", IntParam("nb_scales", 1, 5, 4)),
             # FIXME what is a proper default value??
