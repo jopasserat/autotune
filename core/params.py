@@ -146,26 +146,24 @@ def random_power_of_2(upper_bound, values=[2]):
 
 class DenseCategoricalParam(object):
     '''
-    Similar to CatogricalParam, but draws with replacement
+    Similar to CategoricalParam, but draws with replacement
     '''
-    def __init__(self, name, val_list, default):
+    def __init__(self, name, val_list, mandatory_elements = []):
         self.name = name
         self.val_list = val_list
-        self.default = default
-        self.init_val = default
+        self.mandatory_elements = mandatory_elements
         self.num_vals = len(self.val_list)
         self.param_type = 'densecategorical'
 
     def get_param_range(self, num_vals, stochastic=False):
+        non_mandatory_elems = list(filter(lambda x: x not in self.mandatory_elements, self.val_list.copy()))
         if stochastic:
-            return random_combinations(self.val_list, num_vals, unique=False)
+            # return random subset, but include mandatory values in place
+            values = random_combinations(non_mandatory_elems, num_vals - 1, unique=False)
+            return self.mandatory_elements + values
         else:
-            # return random subset, but include default value
-            tmp = self.val_list.copy()
-            tmp.remove(self.default)
-            values = random_combinations(tmp, num_vals - 1, unique=False)
-            return [self.default] + values
-
+            values = non_mandatory_elems
+        return (self.mandatory_elements + values)[:num_vals]
 
 class PairParam(object):
     '''
@@ -223,6 +221,7 @@ class FactoredParam(object):
         self.first_val_upper_bound = first_val_upper_bound
         self.upper_bound = upper_bound
         self.multipliers = multipliers
+        self.param_type = 'factored'
 
     def get_param_range(self, num_vals, stochastic=False):
         first_val = self.first_value_generator(self.first_val_upper_bound)
