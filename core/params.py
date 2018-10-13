@@ -127,6 +127,23 @@ def random_combinations(val_list, num_vals, unique = True):
     return [val_list[i] for i in indices]
 
 
+def random_power_of_2(upper_bound, values=[2]):
+    '''
+    Generate power of 2 up to upper bound (included)
+    :param upper_bound: greatest power of 2 to generate
+    :param values: list storing powers of 2, initially containing [2]
+    :return: a random power of 2 lower or equal to upper_bound
+    '''
+    values_count = len(values)
+    if (values_count > 0) and (values[-1] > upper_bound):
+        rand_idx = random_indices(values_count - 1, 1)[0]
+        return values[rand_idx]
+    else:
+        new_power2 = pow(2, values_count + 1)
+        values.append(new_power2)
+        return random_power_of_2(upper_bound, values)
+
+
 class DenseCategoricalParam(object):
     '''
     Similar to CatogricalParam, but draws with replacement
@@ -193,6 +210,53 @@ class ConditionalParam(object):
         if hps[self.cond_param] == self.cond_val:
             return self.param
         return None
+
+
+class FactoredParam(object):
+    '''
+    Parameters created by this class are linked by a multiplier to their predecessor
+    '''
+    def __init__(self, name, first_value_generator, first_val_upper_bound, upper_bound, multipliers):
+        self.previous_value = None
+        self.name = name
+        self.first_value_generator = first_value_generator
+        self.first_val_upper_bound = first_val_upper_bound
+        self.upper_bound = upper_bound
+        self.multipliers = multipliers
+
+    def get_param_range(self, num_vals, stochastic=False):
+        first_val = self.first_value_generator(self.first_val_upper_bound)
+        values = generate_factors(first_val, self.multipliers, [first_val], num_vals, self.upper_bound)
+        if stochastic:
+            return random_combinations(values, num_vals)
+        else:
+            return values
+
+
+def generate_factor(multipliers, previous_value):
+    multiplier_idx = random_indices(len(multipliers), 1)[0]
+    current_value = previous_value * multipliers[multiplier_idx]
+    return current_value
+
+
+def generate_factors(previous_value, multipliers, values, target_num_vals, upper_bound):
+    '''
+    Generate a list of values bound to their predecessor by a random multiplier
+    :param previous_value: Previous value generated or initial value on first call
+    :param multipliers: List of potential multiplier to randomly pick from
+    :param values: List of generated values so far, contains [first_val] on first call
+    :param target_num_vals: Number of values to generate
+    :return: List of generated values
+    '''
+    if target_num_vals == len(values):
+        return values
+    else:
+        current_value = generate_factor(multipliers, previous_value)
+        # enforce upper bound
+        if current_value > upper_bound:
+            current_value = upper_bound
+        values.append(current_value)
+        return generate_factors(current_value, multipliers, values, target_num_vals, upper_bound)
 
 
 # Adaptive heuristic zooms into a local portion of the search space.
