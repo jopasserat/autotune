@@ -136,7 +136,7 @@ class DLTKProblem(CifarProblem):
         '''
         # TODO could consider heterogeneous strides
         strides_values = DenseCategoricalParam("strides_values",
-                                               [[1, 1, 1], [2, 2, 2], [3, 3, 3], [4, 4, 4]], [[1, 1, 1]])
+                                               [[1, 1, 1], [2, 2, 2], [4, 4, 4]], [[1, 1, 1]])
 
         # TODO in the future add 0.5, 0.25 as multipliers
         multipliers = [2, 4]
