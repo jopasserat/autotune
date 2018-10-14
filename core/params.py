@@ -156,18 +156,16 @@ class DenseCategoricalParam(object):
         self.param_type = 'densecategorical'
 
     def get_param_range(self, num_vals, stochastic=False):
-        non_mandatory_elems = list(filter(lambda x: x not in self.mandatory_elements, self.val_list.copy()))
         if stochastic:
             # return random subset, but include mandatory values in place
-            values = random_combinations(non_mandatory_elems, num_vals - 1, unique=False)
+            values = random_combinations(self.val_list, num_vals - 1, unique=False)
             return self.mandatory_elements + values
         else:
-            values = non_mandatory_elems
-        return (self.mandatory_elements + values)[:num_vals]
+            return (self.mandatory_elements + self.val_list)[:num_vals]
 
 class PairParam(object):
     '''
-    parameters combosed of two sub-parameters (keys, values)
+    parameters composed of two sub-parameters (keys, values)
     '''
     def __init__(self, name, get_param1_val, param1_key, current_arm, param2,
                  default):
