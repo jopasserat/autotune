@@ -158,18 +158,34 @@ class DLTKProblem(CifarProblem):
 
         return params
 
-    # FIXME can we reuse same prototype?
-    def save_checkpoint(self, path, epoch, model, reader, reader_example_shapes):
+
+    def save_checkpoint(self, path, model, reader, reader_example_shapes):
+        '''
+        Checkpoint model at current steps.
+        this is only called in eval_arm so no need to respect prototype
+        :param path:
+        :param model:
+        :param reader:
+        :param reader_example_shapes:
+        :return:
+        '''
 
         export_dir = model.export_saved_model(
             export_dir_base=path,
             serving_input_receiver_fn=reader.serving_input_receiver_fn(reader_example_shapes))
         print('Model saved to {}.'.format(export_dir))
 
-    def build_model_from_config(self, save_path, config_dictionary):
+    def build_model_from_config(self, save_path, config_dictionary, resume=True):
+        '''
+
+        :param save_path:
+        :param config_dictionary:
+        :param resume: Whether or not to resume training from previous checkpoint
+        :return:
+        '''
 
         # now create model DLTK style
-        config = tf.ConfigProto()
+        # config = tf.ConfigProto()
         # config.gpu_options.allow_growth = True
 
         synapse_model = SynapseMultiAtlas()
@@ -179,10 +195,9 @@ class DLTKProblem(CifarProblem):
             model_fn=synapse_model.model_fn,
             model_dir=save_path,
             params=config_dictionary,
-            config=tf.estimator.RunConfig(session_config=config))
+            warm_start_from=(save_path if resume else None))
 
         return (model, synapse_model)
-
 
     def construct_model(self, arm):
         """
@@ -191,6 +206,7 @@ class DLTKProblem(CifarProblem):
         :return:
         """
         arm["save_path"] = arm['dir'] + "/synapse_ct_seg"
+        arm["warm_start"] = False
 
         # force FCN and cross entropy for the moment
         static_params = {
@@ -216,7 +232,7 @@ class DLTKProblem(CifarProblem):
         Load model from previous checkpoint and resume training
         :param arm:
         :param n_resources:
-        :return:
+        :return: (val_loss, test_loss)
         """
         # load model params config from JSON file
         config_file = arm['dir'] + "/config.json"
@@ -224,7 +240,12 @@ class DLTKProblem(CifarProblem):
             config_dict = json.load(config_file)
 
         # Instantiate the neural network estimator
-        (model, synapse_model) = self.build_model_from_config(arm["save_path"], config_dict)
+        (model, synapse_model) = self.build_model_from_config(arm["save_path"],
+                                                              config_dict,
+                                                              resume=arm["warm_start"])
+        # switch flag after first build
+        if (arm["warm_start"] is False):
+            arm["warm_start"] = True
 
         # Compute derived hyperparameters
         # TODO adjust resources multiplier
