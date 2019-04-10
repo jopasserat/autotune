@@ -355,7 +355,7 @@ class SynapseMultiAtlas(object):
 
         # 3. define a training op and ops for updating
         # moving averages (i.e. for batch normalisation)
-        global_step = tf.train.get_global_step()
+        global_step = tf.train.get_or_create_global_step()
         if params["opt"] == 'adam':
             optimiser = tf.train.AdamOptimizer(
                 learning_rate=params["learning_rate"], epsilon=1e-5)
