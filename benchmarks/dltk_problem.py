@@ -60,6 +60,26 @@ class DLTKBoilerplate(object):
         self.train_filenames = train_filenames
         self.validation_filename = val_filenames
 
+class TrainingMetrics(tf.train.SessionRunHook):
+
+    def __init__(self):
+        import collections
+
+        self.losses = []
+        # how many losses to keep over moving average
+        self.LOSS_WINDOW = 5
+        self.last_losses = collections.deque(maxlen=self.LOSS_WINDOW)
+        self.mean_loss = 0
+
+    def after_run(self, run_context, run_values):
+        import numpy as np
+
+        self.losses = run_context.session.graph.get_collection("losses")
+        new_train_loss = run_context.session.run(self.losses)[0]
+        self.last_losses.append(new_train_loss)
+        self.mean_loss = np.mean(self.last_losses)
+
+
 class DLTKProblem(CifarProblem):
 
     def __init__(self, data_dir, output_dir, train_csv = "train.csv", validation_csv = "val.csv"):
@@ -239,9 +259,10 @@ class DLTKProblem(CifarProblem):
         print('Starting training...')
         try:
             results_val = synapse_model.train_and_evaluate(self.utils, model, n_steps)
+            results_val['train_loss'] = synapse_model.training_metrics.mean_loss
 
-            print('Step = {}; val loss = {:.5f};'.format(
-                results_val['global_step'], results_val['loss']))
+            print('Step = {}; val loss = {:.5f}; mean train loss = {:.5f}; dice = {:.5f}'.format(
+                results_val['global_step'], results_val['loss'], results_val['train_loss'], results_val['dice']))
 
         except KeyboardInterrupt:
             pass
@@ -255,6 +276,7 @@ class SynapseMultiAtlas(object):
 
     def __init__(self):
         self.NUM_CLASSES = 14
+        self.training_metrics = TrainingMetrics()
 
 
     # MODEL
@@ -368,11 +390,16 @@ class SynapseMultiAtlas(object):
         [tf.summary.scalar('dsc_l{}'.format(i), dice_tensor[i])
          for i in range(self.NUM_CLASSES)]
 
+        # average dice over all classes
+        dice_metric = tf.metrics.mean(dice_tensor)
+        metrics = { 'dice': dice_metric }
+
         # 5. Return EstimatorSpec object
         return tf.estimator.EstimatorSpec(
             mode=mode, predictions=net_output_ops,
             loss=loss, train_op=train_op,
-            eval_metric_ops=None)
+            training_hooks=[self.training_metrics],
+            eval_metric_ops=metrics)
 
 
     def train_and_evaluate(self, utils, net, nb_training_steps):
