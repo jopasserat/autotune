@@ -158,23 +158,6 @@ class DLTKProblem(CifarProblem):
 
         return params
 
-
-    def save_checkpoint(self, path, model, reader, reader_example_shapes):
-        '''
-        Checkpoint model at current steps.
-        this is only called in eval_arm so no need to respect prototype
-        :param path:
-        :param model:
-        :param reader:
-        :param reader_example_shapes:
-        :return:
-        '''
-
-        export_dir = model.export_saved_model(
-            export_dir_base=path,
-            serving_input_receiver_fn=reader.serving_input_receiver_fn(reader_example_shapes))
-        print('Model saved to {}.'.format(export_dir))
-
     def build_model_from_config(self, save_path, config_dictionary, resume=True):
         '''
 
@@ -262,6 +245,10 @@ class DLTKProblem(CifarProblem):
 
         except KeyboardInterrupt:
             pass
+
+        # no need to checkpoint with estimators: model is checkpointed automatically at beginning and completion of training
+
+        return results_val
 
 
 class SynapseMultiAtlas(object):
