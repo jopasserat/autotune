@@ -19,7 +19,6 @@ EVAL_EVERY_N_STEPS = 100
 EVAL_STEPS = 1
 # RESOURCES_MULTIPLIER = 10000
 RESOURCES_MULTIPLIER = 1
-MAX_STEPS = 100000 # TODO remove: unused
 BATCH_SIZE = 4
 
 
@@ -166,7 +165,7 @@ class DLTKProblem(CifarProblem):
         # order as the insertion order
         params = OrderedDict([
             ("num_residual_units", IntParam("num_residual_units", 1, 3, 3)),
-            ("learning_rate", Param("learning_rate", -6, -1, distrib='uniform',
+            ("learning_rate", Param("learning_rate", -6, -1.1, distrib='uniform',
                                     scale='log', logbase=10)),
             ("nb_scales", IntParam("nb_scales", 1, 5, 4)),
             # FIXME what is a proper default value??
@@ -259,7 +258,6 @@ class DLTKProblem(CifarProblem):
         print('Starting training...')
         try:
             results_val = synapse_model.train_and_evaluate(self.utils, model, n_steps)
-            results_val['train_loss'] = synapse_model.training_metrics.mean_loss
 
             print('Step = {}; val loss = {:.5f}; mean train loss = {:.5f}; dice = {:.5f}'.format(
                 results_val['global_step'], results_val['loss'], results_val['train_loss'], results_val['dice']))
@@ -269,15 +267,21 @@ class DLTKProblem(CifarProblem):
 
         # no need to checkpoint with estimators: model is checkpointed automatically at beginning and completion of training
 
-        return results_val
+        # return results_val
+        return results_val['train_loss'], results_val['loss']
 
 
 class SynapseMultiAtlas(object):
 
+    penalty_values = {
+        'dice': 0.0,
+        'train_loss': 10000.0,
+        'loss': 10000.0
+    }
+
     def __init__(self):
         self.NUM_CLASSES = 14
         self.training_metrics = TrainingMetrics()
-
 
     # MODEL
     def model_fn(self, features, labels, mode, params):
@@ -412,14 +416,24 @@ class SynapseMultiAtlas(object):
         """
         print("<<< parameters >>> {}".format(net.params))
 
-        net.train(
-                input_fn=utils.train_input_fn,
-                hooks=[utils.train_qinit_hook, utils.step_cnt_hook],
-                steps=nb_training_steps)
+        # # set metrics to "penalty value" when model diverges with:
+        # ERROR:tensorflow:Model diverged with loss = NaN.
+        # tensorflow.python.training.basic_session_run_hooks.NanLossDuringTrainingError: NaN loss during training.
+        try:
+            net.train(
+                    input_fn=utils.train_input_fn,
+                    hooks=[utils.train_qinit_hook, utils.step_cnt_hook],
+                    steps=nb_training_steps)
 
-        results_val = net.evaluate(
-            input_fn=utils.val_input_fn,
-            hooks=[utils.val_qinit_hook, utils.val_summary_hook],
-            steps=EVAL_STEPS)
+            results_val = net.evaluate(
+                input_fn=utils.val_input_fn,
+                hooks=[utils.val_qinit_hook, utils.val_summary_hook],
+                steps=EVAL_STEPS)
+
+            results_val['train_loss'] = self.training_metrics.mean_loss
+
+        except:
+            results_val = SynapseMultiAtlas.penalty_values.copy()
+            results_val['global_step'] = "n/a"
 
         return results_val
