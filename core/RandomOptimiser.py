@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from ..util.best_value import best_value
+from util.best_value import best_value
 
 
 class RandomOptimiser(object):
