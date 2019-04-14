@@ -81,12 +81,13 @@ class TrainingMetrics(tf.train.SessionRunHook):
 
 class DLTKProblem(CifarProblem):
 
-    def __init__(self, data_dir, output_dir, train_csv = "train.csv", validation_csv = "val.csv"):
+    def __init__(self, data_dir, output_dir, seed = 42, train_csv = "train.csv", validation_csv = "val.csv"):
 
         self.data_dir = data_dir
         self.output_dir = output_dir
         self.train_csv = train_csv
         self.validation_csv = validation_csv
+        self.seed = seed
 
         super(DLTKProblem, self).__init__(data_dir, output_dir)
         # Set this to choose a subset of tunable hyperparams
@@ -102,8 +103,8 @@ class DLTKProblem(CifarProblem):
         SHUFFLE_CACHE_SIZE = 128
 
         # FIXME: move some place else
-        np.random.seed(42)
-        tf.set_random_seed(42)
+        np.random.seed(self.seed)
+        tf.set_random_seed(self.seed)
 
         print('Setting up...')
 
