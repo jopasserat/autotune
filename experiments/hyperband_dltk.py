@@ -5,6 +5,8 @@ from core.HyperbandOptimiser import HyperbandOptimiser
 from benchmarks.dltk_problem import DLTKProblem
 import os
 
+from util.io import format_arms
+
 data_dir = '/home/jopasserat/postdoc/openmole/hyperparam-tuning/data'
 output_dir = '/tmp/exp1'
 
@@ -33,10 +35,10 @@ problem.print_domain()
 hyperband_opt = HyperbandOptimiser()
 hyperband_opt.run_optimization(problem, max_iter=n_resources, verbosity=True)
 
-print("Optimal arm: "
-      "parameters = {}"
-      "top losses = {}"
-      "opt res = {}".format(hyperband_opt.arm_opt, hyperband_opt.Y_best, hyperband_opt.fx_opt)
+print("""Optimal arm:
+    parameters = {}
+    top losses = {}
+    opt res = {}""".format(format_arms(hyperband_opt.arm_opt), hyperband_opt.Y_best, hyperband_opt.fx_opt)
 )
 
 # Constrain random optimisation to the same time budget
