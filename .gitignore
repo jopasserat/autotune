@@ -13,7 +13,9 @@ experiments/checkpoint/*
 *.ko
 *.obj
 *.elf
-*.pyc
+*.pyc*
+__pycache__
+
 
 # Linker output
 *.ilk
