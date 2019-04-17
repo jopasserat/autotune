@@ -12,6 +12,7 @@ class TpeOptimiser(RandomOptimiser):
 
     def run_optimization(self, problem, n_resources, max_iter=None, max_time=np.inf, verbosity=False):
         # problem provides generate_random_arm and eval_arm(x)
+
         # --- Setting up stop conditions
         if (max_iter is None) and (max_time is None):
             self.max_iter = 0

@@ -15,8 +15,9 @@ class CifarProblem(TorchNetProblem):
         super(CifarProblem, self).__init__(data_dir, output_dir)
 
         # Set this to choose a subset of tunable hyperparams
-        # self.hps = None
-        self.hps = ['learning_rate', 'n_units_1', 'n_units_2', 'n_units_3', 'batch_size']
+        self.hps = None
+        #self.hps = ['learning_rate', 'n_units_1', 'n_units_2', 'n_units_3', 'batch_size']
+        self.name = "CIFAR"
 
     def initialise_data(self):
         # 40k train, 10k val, 10k test
@@ -35,6 +36,11 @@ class CifarProblem(TorchNetProblem):
 
     def construct_model(self, arm):
         arm['filename'] = arm['dir'] + "/model.pth"
+
+        # Initialise trackers
+        arm['epoch'] = []
+        arm['val_error'] = []
+        arm['test_error'] = []
 
         # Construct model and optimizer based on hyperparameters
         base_lr = arm['learning_rate']
@@ -58,7 +64,13 @@ class CifarProblem(TorchNetProblem):
     def eval_arm(self, arm, n_resources):
         print("\nLoading arm with parameters.....")
 
+        # # Cap total resource at 81 artificially for comparison sake
+        # max_resource = 81
+        # if arm['n_resources'] + n_resources > max_resource:
+        #     n_resources = max_resource - arm['n_resources']
+
         arm['n_resources'] = arm['n_resources'] + n_resources
+
         print(arm)
 
         # Load model and optimiser from file to resume training
@@ -103,6 +115,10 @@ class CifarProblem(TorchNetProblem):
         # Evaluate trained net on val and test set
         val_error = self.test(self.val_loader, model, criterion)
         test_error = self.test(self.test_loader, model, criterion)
+
+        arm['epoch'].append(epoch)
+        arm['val_error'].append(val_error)
+        arm['test_error'].append(test_error)
 
         self.save_checkpoint(arm['filename'], start_epoch+max_epochs, model, optimizer, val_error, test_error)
 
