@@ -5,6 +5,10 @@ from ..core.params import *
 
 
 class BraninProblem(Problem):
+    """
+    Canonical optimisation test problem
+    @see https://www.sfu.ca/~ssurjano/branin.html
+    """
 
     def __init__(self):
         self.domain = self.initialise_domain()
