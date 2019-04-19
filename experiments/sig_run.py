@@ -1,11 +1,8 @@
 import pickle
 import argparse
 
-from ..core.RandomOptimiser import RandomOptimiser
 from ..core.SigOptimiser import SigOptimiser
-from ..benchmarks.mnist_problem import MnistProblem
-# from ..benchmarks.cifar_problem import CifarProblem
-# from ..benchmarks.svhn_problem import SvhnProblem
+from ..benchmarks.cifar_problem import CifarProblem
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
 parser.add_argument('-i', '--input_dir', type=str, help='input dir')
@@ -18,21 +15,18 @@ print("Output directory: {}".format(args.output_dir))
 print("# resources: {}".format(args.n_resources))
 
 # Define problem instance
-problem = MnistProblem(args.input_dir, args.output_dir)
+problem = CifarProblem(args.input_dir, args.output_dir)
 problem.print_domain()
 
 # Define maximum units of resource assigned to each optimisation iteration
 n_resources = args.n_resources
 
-random_opt = RandomOptimiser()
-random_opt.run_optimization(problem, n_resources, max_iter=2, verbosity=True)
-
 sig_opt = SigOptimiser()
-sig_opt.run_optimization(problem, n_resources, max_iter=5, verbosity=True)
+sig_opt.run_optimization(problem, n_resources, max_iter=30, verbosity=True)
 
 filename = args.output_dir + 'results.pkl'
 with open(filename, 'wb') as f:
-    pickle.dump([random_opt, sig_opt], f)
+    pickle.dump([sig_opt], f)
 
 print(sig_opt.arm_opt)
 print(sig_opt.fx_opt)

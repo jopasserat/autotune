@@ -9,7 +9,7 @@ class HyperbandOptimiser(RandomOptimiser):
         super(HyperbandOptimiser, self).__init__()
         self.name = "Hyperband"
 
-    def run_optimization(self, problem, n_units=None, max_iter=None, eta=3, verbosity=False):
+    def run_optimization(self, problem, n_resources=None, max_iter=None, eta=3, verbosity=False):
         # problem provides generate_random_arm and eval_arm(x)
 
         print("\n---- Running hyperband optimisation ----")
